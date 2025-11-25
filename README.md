@@ -393,12 +393,6 @@ cd install_yamls/devsetup
 make edpm_deploy_instance NUMBER_OF_INSTANCES=3
 ```
 
-**Important Notes:**
-- The `edpm_deploy_instance` utility uses `oc rsh openstackclient` which operates in the **current namespace** set by `oc project`
-- Always run `oc project <namespace>` before using this utility to target the correct RHOSO instance
-- Each instance maintains separate OpenStack resources (images, networks, VMs, floating IPs)
-- The test creates resources with generic names, so running it multiple times in the same namespace may create duplicate resources
-
 ## Cleanup
 
 ### Remove Instance 2
@@ -443,7 +437,6 @@ For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTI
 |--------|-------------|
 | `make openshift` | Install OpenShift (CRC) with development tools. Downloads kubectl, kustomize, oc, operator-sdk automatically |
 | `make download_tools` | Download only the development tools without installing OpenShift |
-| `make crc` | Deprecated alias for `make openshift` |
 
 ### Shared Infrastructure (Run Once)
 
