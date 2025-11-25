@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# EDPM DataPlane for rhoso2
+# References base/dataplane with strategic merge patch for rhoso2-specific compute node
+
+namespace: rhoso2
+
+resources:
+  - ../../../base/dataplane
+
+patchesStrategicMerge:
+  - patch-nodeset.yaml
+
+labels:
+  - pairs:
+      deployment: multi-rhoso
+      instance: rhoso2
+      layer: dataplane
+      managed-by: kustomize
+
+commonLabels:
+  app.kubernetes.io/part-of: openstack
+  app.kubernetes.io/managed-by: kustomize

@@ -1,0 +1,29 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rhoso1-dataplane
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rhos-vaf/multi-rhoso.git  # UPDATE THIS
+    targetRevision: main  # or your branch name
+    path: va/overlays/rhoso1/dataplane
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rhoso1
+  syncPolicy:
+    automated:
+      prune: false  # Prevent accidental deletion of compute nodes
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  ignoreDifferences:
+    - group: dataplane.openstack.org
+      kind: OpenStackDataPlaneService
+      jsonPointers:
+        - /metadata/labels/app.kubernetes.io~1part-of
+        - /metadata/labels/app.kubernetes.io~1instance
+  # Note: Deploy this AFTER controlplane reaches STATUS=True (~20-30 min)

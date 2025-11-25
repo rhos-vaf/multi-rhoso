@@ -1,0 +1,29 @@
+---
+# IMPORTANT: SSH keys have been removed for security
+#
+# To use this configuration:
+# 1. Generate Nova migration SSH keypair: ssh-keygen -t ed25519 -f ~/.ssh/nova_migration_key -N ''
+# 2. Replace the placeholder values below with your actual keys:
+#    - ssh-privatekey: Contents of ~/.ssh/nova_migration_key
+#    - ssh-publickey: Contents of ~/.ssh/nova_migration_key.pub
+# 3. This key is used for Nova live migration between compute nodes
+#
+# See README.md for detailed setup instructions
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nova-migration-ssh-key
+  annotations:
+    argocd.argoproj.io/sync-wave: "9"
+  labels:
+    type: osp-secret
+type: kubernetes.io/ssh-auth
+stringData:
+  ssh-privatekey: |
+    # REPLACE WITH YOUR NOVA MIGRATION SSH PRIVATE KEY
+    # Format: -----BEGIN OPENSSH PRIVATE KEY-----
+    #         <base64 encoded key data>
+    #         -----END OPENSSH PRIVATE KEY-----
+  ssh-publickey: |
+    # REPLACE WITH YOUR NOVA MIGRATION SSH PUBLIC KEY
+    # Format: ssh-ed25519 AAAA... user@host

@@ -1,0 +1,10 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base OpenStack Control Plane
+# Wave 0: OpenStackControlPlane
+# Note: namespace is set by overlay, not here
+
+resources:
+  - openstackcontrolplane.yaml
