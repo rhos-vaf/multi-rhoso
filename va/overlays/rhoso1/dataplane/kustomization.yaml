@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# EDPM DataPlane for rhoso1
+# References base/dataplane with minimal patches
+
+namespace: rhoso1
+
+resources:
+  - ../../../base/dataplane
+
+labels:
+  - pairs:
+      deployment: multi-rhoso
+      instance: rhoso1
+      layer: dataplane
+      managed-by: kustomize
+
+commonLabels:
+  app.kubernetes.io/part-of: openstack
+  app.kubernetes.io/managed-by: kustomize

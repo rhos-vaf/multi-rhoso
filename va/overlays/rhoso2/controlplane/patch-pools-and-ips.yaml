@@ -1,0 +1,142 @@
+---
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack
+  annotations:
+    metallb.universe.tf/address-pool: rhoso2-ctlplane
+spec:
+  dns:
+    template:
+      override:
+        service:
+          metadata:
+            annotations:
+              metallb.universe.tf/address-pool: rhoso2-ctlplane
+
+  rabbitmq:
+    templates:
+      rabbitmq:
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+      rabbitmq-cell1:
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+
+  keystone:
+    template:
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  placement:
+    template:
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  glance:
+    template:
+      glanceAPIs:
+        default:
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: rhoso2-internalapi
+                    metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  cinder:
+    template:
+      cinderAPI:
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso2-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  neutron:
+    template:
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  nova:
+    template:
+      apiServiceTemplate:
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso2-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+      metadataServiceTemplate:
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso2-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  telemetry:
+    template:
+      cloudkitty:
+        cloudKittyAPI:
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: rhoso2-internalapi
+                    metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+      logging:
+        annotations:
+          metallb.universe.tf/address-pool: rhoso2-internalapi
+          metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+          metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+
+  swift:
+    template:
+      swiftProxy:
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso2-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso2-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.18.20.80
+              spec:
+                type: LoadBalancer

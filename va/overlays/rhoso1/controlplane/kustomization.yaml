@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# OpenStack Control Plane for rhoso1
+# Uses base/controlplane directly - base already has rhoso1 values (pools, IPs)
+
+namespace: rhoso1
+
+resources:
+  - ../../../base/controlplane
+
+labels:
+  - pairs:
+      deployment: multi-rhoso
+      instance: rhoso1
+      layer: controlplane
+      managed-by: kustomize
+
+commonLabels:
+  app.kubernetes.io/part-of: openstack
+  app.kubernetes.io/managed-by: kustomize

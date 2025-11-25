@@ -109,6 +109,63 @@ ssh -i ~/multi-rhoso/install_yamls/out/edpm/ansibleee-ssh-key-id_rsa root@192.16
   - [config/rhoso1.env](config/rhoso1.env): `DATAPLANE_COMPUTE_0_NAME=edpm-compute-0`
   - [config/rhoso2.env](config/rhoso2.env): `DATAPLANE_COMPUTE_0_NAME=edpm-compute-1`
 
+**SSH Key Note for Deployment Methods:**
+- **Traditional Makefile deployment**: SSH keys are generated automatically during deployment
+- **GitOps deployment**: You must manually configure SSH keys before deployment (see [gitops/README.md - SSH Key Setup](gitops/README.md#ssh-key-setup-required-for-gitops-deployment))
+
+## Deployment Methods
+
+This project supports **two deployment methods**:
+
+### Method 1: Traditional Makefile Deployment
+- Step-by-step deployment using `make` commands
+- Full control over each deployment phase
+- Good for understanding the deployment process
+- See [Quick Start](#quick-start) below
+
+### Method 2: GitOps Deployment with ArgoCD
+- Complete automated deployment using ArgoCD sync waves
+- Declarative, version-controlled configuration
+- Manages entire lifecycle: NNCP → Namespace → NAD → MetalLB → Secrets → NetConfig → ControlPlane → EDPM
+- Full deployment in ~40-50 minutes, completely automated
+- Automatic Nova cell host discovery included
+- See [gitops/README.md](gitops/README.md) for details
+
+**Comparison:**
+
+| Feature | Traditional (Makefile) | GitOps (ArgoCD) |
+|---------|------------------------|-----------------|
+| **Deployment** | Manual `make` commands | Automated sync waves |
+| **Configuration** | Shell env files | Kustomize overlays |
+| **Version Control** | Scripts only | Complete manifests |
+| **Rollback** | Manual re-deployment | Git revert |
+| **Drift Detection** | None | Automatic (ArgoCD) |
+| **Multi-cluster** | Complex | Native support |
+| **Production Ready** | Yes | Highly recommended |
+
+**GitOps Quick Example:**
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rhoso1
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/your-org/multi-rhoso.git
+    path: va/overlays/rhoso1
+  destination:
+    namespace: rhoso1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+For complete GitOps documentation including sync waves, network configuration, and troubleshooting, see **[gitops/README.md](gitops/README.md)**.
+
+---
+
 ## Quick Start
 
 ### 1. Clone This Repository
@@ -441,6 +498,49 @@ Removes:
 ## Troubleshooting
 
 For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+### Common Issue: Empty Hypervisor List
+
+If `openstack hypervisor list` returns empty even though `openstack compute service list` shows the compute service as `enabled | up`, the compute host needs to be discovered and mapped to the Nova cell:
+
+**Symptoms:**
+- Compute service shows as `up` in `openstack compute service list`
+- Resource provider exists in Placement API (`openstack resource provider list` shows the compute node)
+- `openstack hypervisor list` returns empty
+
+**Root Cause:**
+Nova requires explicit host-to-cell mapping. Even when the compute service registers successfully and reports resources to Placement API, it won't appear in the hypervisor list until discovered by the cell conductor.
+
+**Solution:**
+```bash
+# For rhoso1
+oc -n rhoso1 exec -it nova-cell1-conductor-0 -- nova-manage cell_v2 discover_hosts --verbose
+
+# For rhoso2
+oc -n rhoso2 exec -it nova-cell1-conductor-0 -- nova-manage cell_v2 discover_hosts --verbose
+```
+
+**Expected output:**
+```
+Found 2 cell mappings.
+Skipping cell0 since it does not contain hosts.
+Getting computes from cell 'cell1': <cell-uuid>
+Checking host mapping for compute host 'edpm-compute-X.ctlplane.example.com': <uuid>
+Creating host mapping for compute host 'edpm-compute-X.ctlplane.example.com': <uuid>
+Found 1 unmapped computes in cell: <cell-uuid>
+```
+
+**Verify:**
+```bash
+# Check host mappings
+oc -n rhoso1 exec -it nova-cell1-conductor-0 -- nova-manage cell_v2 list_hosts
+
+# Verify hypervisors are now visible
+oc -n rhoso1 rsh openstackclient openstack hypervisor list
+```
+
+**For Production:**
+Configure automatic discovery by setting `discover_hosts_in_cells_interval` in nova.conf (e.g., `discover_hosts_in_cells_interval = 60` to check every 60 seconds). The Makefile deployment automatically runs host discovery via `make dataplane`, but GitOps deployments may require manual discovery after initial deployment.
 
 ## Available Make Targets
 

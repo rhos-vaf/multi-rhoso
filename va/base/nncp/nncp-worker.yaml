@@ -1,0 +1,143 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: nncp-worker
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    interfaces:
+      - name: ospbr
+        type: linux-bridge
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 192.168.122.10
+              prefix-length: 24
+            - ip: 192.168.122.20
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        bridge:
+          options:
+            stp:
+              enabled: false
+          port:
+            - name: enp6s0
+      # VLAN 20 - InternalAPI
+      - name: enp6s0.20
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.20.10
+              prefix-length: 24
+            - ip: 172.18.20.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 20
+      # VLAN 21 - Storage
+      - name: enp6s0.21
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.21.10
+              prefix-length: 24
+            - ip: 172.18.21.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 21
+      # VLAN 22 - Tenant
+      - name: enp6s0.22
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.22.10
+              prefix-length: 24
+            - ip: 172.18.22.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 22
+      # VLAN 23 - StorageMgmt
+      - name: enp6s0.23
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.23.10
+              prefix-length: 24
+            - ip: 172.18.23.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 23
+      # VLAN 25 - Designate
+      - name: enp6s0.25
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.25.10
+              prefix-length: 24
+            - ip: 172.18.25.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 25
+      # VLAN 26 - External/Designate
+      - name: enp6s0.26
+        type: vlan
+        state: up
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+            - ip: 172.17.26.10
+              prefix-length: 24
+            - ip: 172.18.26.10
+              prefix-length: 24
+        ipv6:
+          enabled: false
+        vlan:
+          base-iface: enp6s0
+          id: 26
+    dns-resolver:
+      config:
+        server:
+          - 192.168.122.1
+    routes:
+      config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 192.168.122.1
+          next-hop-interface: ospbr
+          table-id: 254

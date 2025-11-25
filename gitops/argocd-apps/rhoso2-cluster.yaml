@@ -1,0 +1,22 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rhoso2-cluster
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rhos-vaf/multi-rhoso.git  # UPDATE THIS
+    targetRevision: main  # or your branch name
+    path: va/overlays/rhoso2/cluster
+  destination:
+    server: https://kubernetes.default.svc
+    # No namespace - cluster-scoped resources
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
