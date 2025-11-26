@@ -38,6 +38,8 @@ echo "InternalAPI: ${NETWORK_INTERNALAPI_ADDRESS_PREFIX}.5/24"
 echo "Storage: ${NETWORK_STORAGE_ADDRESS_PREFIX}.5/24"
 echo "Tenant: ${NETWORK_TENANT_ADDRESS_PREFIX}.5/24"
 echo "StorageMgmt: ${NETWORK_STORAGEMGMT_ADDRESS_PREFIX}.5/24"
+echo "Designate: ${NETWORK_DESIGNATE_ADDRESS_PREFIX}.5/24"
+echo "DesignateExt: ${NETWORK_DESIGNATE_EXT_ADDRESS_PREFIX}.5/24"
 echo "=========================================="
 echo ""
 
@@ -57,12 +59,16 @@ INTERNALAPI_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.inte
 STORAGE_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.interfaces[1].ipv4.address[*].ip}' 2>/dev/null || echo "")
 TENANT_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.interfaces[2].ipv4.address[*].ip}' 2>/dev/null || echo "")
 STORAGEMGMT_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.interfaces[3].ipv4.address[*].ip}' 2>/dev/null || echo "")
+DESIGNATE_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.interfaces[6].ipv4.address[*].ip}' 2>/dev/null || echo "")
+DESIGNATE_EXT_IPS=$(oc get nncp ${NNCP_NAME} -o jsonpath='{.spec.desiredState.interfaces[7].ipv4.address[*].ip}' 2>/dev/null || echo "")
 
 # Check each network
 INTERNALAPI_EXISTS=false
 STORAGE_EXISTS=false
 TENANT_EXISTS=false
 STORAGEMGMT_EXISTS=false
+DESIGNATE_EXISTS=false
+DESIGNATE_EXT_EXISTS=false
 
 if echo "$INTERNALAPI_IPS" | grep -q "${NETWORK_INTERNALAPI_ADDRESS_PREFIX}.5"; then
     echo "✓ InternalAPI: ${NETWORK_INTERNALAPI_ADDRESS_PREFIX}.5 already exists on enp6s0.20"
@@ -92,8 +98,22 @@ else
     echo "○ StorageMgmt: ${NETWORK_STORAGEMGMT_ADDRESS_PREFIX}.5 needs to be added"
 fi
 
+if echo "$DESIGNATE_IPS" | grep -q "${NETWORK_DESIGNATE_ADDRESS_PREFIX}.5"; then
+    echo "✓ Designate: ${NETWORK_DESIGNATE_ADDRESS_PREFIX}.5 already exists on enp6s0.25"
+    DESIGNATE_EXISTS=true
+else
+    echo "○ Designate: ${NETWORK_DESIGNATE_ADDRESS_PREFIX}.5 needs to be added"
+fi
+
+if echo "$DESIGNATE_EXT_IPS" | grep -q "${NETWORK_DESIGNATE_EXT_ADDRESS_PREFIX}.5"; then
+    echo "✓ DesignateExt: ${NETWORK_DESIGNATE_EXT_ADDRESS_PREFIX}.5 already exists on enp6s0.26"
+    DESIGNATE_EXT_EXISTS=true
+else
+    echo "○ DesignateExt: ${NETWORK_DESIGNATE_EXT_ADDRESS_PREFIX}.5 needs to be added"
+fi
+
 # If all IPs already exist, exit successfully
-if [ "$INTERNALAPI_EXISTS" = true ] && [ "$STORAGE_EXISTS" = true ] && [ "$TENANT_EXISTS" = true ] && [ "$STORAGEMGMT_EXISTS" = true ]; then
+if [ "$INTERNALAPI_EXISTS" = true ] && [ "$STORAGE_EXISTS" = true ] && [ "$TENANT_EXISTS" = true ] && [ "$STORAGEMGMT_EXISTS" = true ] && [ "$DESIGNATE_EXISTS" = true ] && [ "$DESIGNATE_EXT_EXISTS" = true ]; then
     echo ""
     echo "=========================================="
     echo "✅ All secondary IPs already configured!"
@@ -154,6 +174,28 @@ if [ "$STORAGEMGMT_EXISTS" = false ]; then
     FIRST_PATCH=false
 fi
 
+# Designate (enp6s0.25 - interface index 6)
+if [ "$DESIGNATE_EXISTS" = false ]; then
+    if [ "$FIRST_PATCH" = false ]; then
+        PATCH_OPS+=","
+    fi
+    PATCH_OPS+="
+  {\"op\": \"add\", \"path\": \"/spec/desiredState/interfaces/6/ipv4/address/-\",
+   \"value\": {\"ip\": \"${NETWORK_DESIGNATE_ADDRESS_PREFIX}.5\", \"prefix-length\": 24}}"
+    FIRST_PATCH=false
+fi
+
+# DesignateExt (enp6s0.26 - interface index 7)
+if [ "$DESIGNATE_EXT_EXISTS" = false ]; then
+    if [ "$FIRST_PATCH" = false ]; then
+        PATCH_OPS+=","
+    fi
+    PATCH_OPS+="
+  {\"op\": \"add\", \"path\": \"/spec/desiredState/interfaces/7/ipv4/address/-\",
+   \"value\": {\"ip\": \"${NETWORK_DESIGNATE_EXT_ADDRESS_PREFIX}.5\", \"prefix-length\": 24}}"
+    FIRST_PATCH=false
+fi
+
 PATCH_OPS+="]"
 
 echo "Applying NNCP patch..."
@@ -173,8 +215,33 @@ else
 fi
 
 echo ""
-echo "Verifying secondary IPs on CRC node..."
-oc -n default debug node/crc -- chroot /host ip addr show enp6s0.20 2>/dev/null | grep -E 'inet (172|fd)' || echo "Unable to verify (check manually with: oc -n default debug node/crc -- chroot /host ip addr show enp6s0.20)"
+echo "=========================================="
+echo "Verifying IPs on CRC Node"
+echo "=========================================="
+echo ""
+
+echo "VLAN 20 (InternalAPI - enp6s0.20):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.20 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
+echo ""
+
+echo "VLAN 21 (Storage - enp6s0.21):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.21 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
+echo ""
+
+echo "VLAN 22 (Tenant - enp6s0.22):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.22 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
+echo ""
+
+echo "VLAN 23 (StorageMgmt - enp6s0.23):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.23 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
+echo ""
+
+echo "VLAN 25 (Designate - enp6s0.25):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.25 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
+echo ""
+
+echo "VLAN 26 (DesignateExt - enp6s0.26):"
+oc -n default debug node/crc -- chroot /host ip addr show enp6s0.26 2>/dev/null | grep "inet " | sed 's/^/    /' || echo "    Failed to get IPs"
 
 echo ""
 echo "=========================================="
