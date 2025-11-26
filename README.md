@@ -28,16 +28,18 @@ This project provides a simplified workflow for deploying multiple RHOSO instanc
 │  │ MetalLB (LoadBalancer IPs)                   │          │
 │  │ - Pool 1: 192.168.122.80-90                  │          │
 │  │ - Pool 2: 192.168.122.110-120                │          │
-│  │ - Pool 1 InternalAPI: 172.17.0.80-90         │          │
-│  │ - Pool 2 InternalAPI: 172.27.0.80-90         │          │
+│  │ - Pool 1 InternalAPI: 172.17.20.80-90        │          │
+│  │ - Pool 2 InternalAPI: 172.18.20.80-90        │          │
 │  └──────────────────────────────────────────────┘          │
 │                                                              │
 │  ┌──────────────────────────────────────────────┐          │
 │  │ NMState (Network Configuration)              │          │
-│  │ - VLAN 20: InternalAPI (172.17/172.27)       │          │
-│  │ - VLAN 21: Storage (172.18/172.29)           │          │
-│  │ - VLAN 22: Tenant (172.19/172.31)            │          │
-│  │ - VLAN 23: StorageMgmt (172.20/172.32)       │          │
+│  │ - VLAN 20: InternalAPI (172.17.20/172.18.20) │          │
+│  │ - VLAN 21: Storage (172.17.21/172.18.21)     │          │
+│  │ - VLAN 22: Tenant (172.17.22/172.18.22)      │          │
+│  │ - VLAN 23: StorageMgmt (172.17.23/172.18.23) │          │
+│  │ - VLAN 25: Designate (172.17.25/172.18.25)   │          │
+│  │ - VLAN 26: DesignateExt (172.17.26/172.18.26)│          │
 │  └──────────────────────────────────────────────┘          │
 └─────────────────────────────────────────────────────────────┘
                      │                    │
@@ -218,56 +220,17 @@ source config/rhoso2.env && make dataplane        # Deploy second EDPM compute n
 
 ## Configuration
 
-### Instance 1 Configuration
+For detailed configuration information including network addressing schemes, instance-specific settings, and advanced configuration options, see **[CONFIGURATION.md](CONFIGURATION.md)**.
 
-Edit [config/rhoso1.env](config/rhoso1.env) to customize:
+**Quick Reference:**
+- **RHOSO 1**: Uses `172.17.X.0/24` range (where X = VLAN ID)
+- **RHOSO 2**: Uses `172.18.X.0/24` range (where X = VLAN ID)
+- **Red Hat Support**: Up to **[5 RHOSO environments](https://docs.redhat.com/en/documentation/red_hat_openstack_services_on_openshift/18.0/html-single/deploying_multiple_rhoso_environments_on_a_single_rhocp_cluster/index)** officially supported
+- **Pattern**: `172.[16+N].[VLAN].0/24` where N = instance number
 
-```bash
-export NAMESPACE=rhoso1
-export NETWORK_INTERNALAPI_ADDRESS_PREFIX=172.17.0
-export NETWORK_STORAGE_ADDRESS_PREFIX=172.18.0
-export NETWORK_TENANT_ADDRESS_PREFIX=172.19.0
-export NETWORK_STORAGEMGMT_ADDRESS_PREFIX=172.20.0
-export CTLPLANE_METALLB_POOL=192.168.122.80-192.168.122.90
-export DATAPLANE_COMPUTE_IP=192.168.122.100
-export DATAPLANE_COMPUTE_0_IP=192.168.122.100
-export DATAPLANE_COMPUTE_0_NAME=edpm-compute-0
-```
-
-**Note:** The `DATAPLANE_COMPUTE_0_NAME` must match the hostname configured on the EDPM node. The deployment will SSH to `DATAPLANE_COMPUTE_0_IP` and expect the hostname to be `edpm-compute-0.example.com`.
-
-### Instance 2 Configuration
-
-Edit [config/rhoso2.env](config/rhoso2.env):
-
-```bash
-export NAMESPACE=rhoso2
-export NETWORK_INTERNALAPI_ADDRESS_PREFIX=172.27.0
-export NETWORK_STORAGE_ADDRESS_PREFIX=172.29.0
-export NETWORK_TENANT_ADDRESS_PREFIX=172.31.0
-export NETWORK_STORAGEMGMT_ADDRESS_PREFIX=172.32.0
-export CTLPLANE_METALLB_POOL=192.168.122.110-192.168.122.120
-export DATAPLANE_COMPUTE_IP=192.168.122.101
-export DATAPLANE_COMPUTE_0_IP=192.168.122.101
-export DATAPLANE_COMPUTE_0_NAME=edpm-compute-1
-```
-
-**Note:** Instance 2 connects to a different EDPM node (`192.168.122.101`) with hostname `edpm-compute-1.example.com`.
-
-### Key Configuration Requirements
-
-**MUST be unique per instance:**
-- `NAMESPACE` - Kubernetes namespace
-- `NETWORK_*_ADDRESS_PREFIX` - IP subnet prefixes
-- `CTLPLANE_METALLB_POOL` - LoadBalancer IP ranges
-- `DATAPLANE_COMPUTE_IP` - EDPM node IP address
-- `DATAPLANE_COMPUTE_0_IP` - EDPM node IP address (same as above)
-- `DATAPLANE_COMPUTE_0_NAME` - EDPM node short hostname (without .example.com)
-
-**MUST be the same across instances:**
-- `NNCP_INTERFACE` - Physical interface (e.g., enp6s0)
-- `NNCP_BRIDGE` - Bridge name (ospbr)
-- `NETWORK_VLAN_START` - First VLAN ID (20)
+Configuration files:
+- [config/rhoso1.env](config/rhoso1.env) - Instance 1 configuration
+- [config/rhoso2.env](config/rhoso2.env) - Instance 2 configuration
 
 ## Implementation Details
 
@@ -281,15 +244,39 @@ For detailed technical information about NNCP behavior, MetalLB configuration, a
 make verify-nncp
 ```
 
-Expected output:
+Expected output showing all VLAN interfaces and their IP addresses:
 ```
 NNCP Resources:
 NAME         STATUS
 enp6s0-crc   Available
 
-IP Addresses on CRC Node (enp6s0.20 - InternalAPI):
-    inet 172.17.0.5/24 brd 172.17.0.255 scope global enp6s0.20
-    inet 172.27.0.5/24 brd 172.27.0.255 scope global secondary enp6s0.20
+==========================================
+IP Addresses on CRC Node
+==========================================
+
+VLAN 20 (InternalAPI - enp6s0.20):
+    inet 172.17.20.5/24 brd 172.17.20.255 scope global enp6s0.20
+    inet 172.18.20.5/24 brd 172.18.20.255 scope global secondary enp6s0.20
+
+VLAN 21 (Storage - enp6s0.21):
+    inet 172.17.21.5/24 brd 172.17.21.255 scope global enp6s0.21
+    inet 172.18.21.5/24 brd 172.18.21.255 scope global secondary enp6s0.21
+
+VLAN 22 (Tenant - enp6s0.22):
+    inet 172.17.22.5/24 brd 172.17.22.255 scope global enp6s0.22
+    inet 172.18.22.5/24 brd 172.18.22.255 scope global secondary enp6s0.22
+
+VLAN 23 (StorageMgmt - enp6s0.23):
+    inet 172.17.23.5/24 brd 172.17.23.255 scope global enp6s0.23
+    inet 172.18.23.5/24 brd 172.18.23.255 scope global secondary enp6s0.23
+
+VLAN 25 (Designate - enp6s0.25):
+    inet 172.17.25.5/24 brd 172.17.25.255 scope global enp6s0.25
+    inet 172.18.25.5/24 brd 172.18.25.255 scope global secondary enp6s0.25
+
+VLAN 26 (DesignateExt - enp6s0.26):
+    inet 172.17.26.5/24 brd 172.17.26.255 scope global enp6s0.26
+    inet 172.18.26.5/24 brd 172.18.26.255 scope global secondary enp6s0.26
 ```
 
 ### Verify Instance 1
@@ -310,12 +297,12 @@ rhoso1    Ready
 
 MetalLB Pools:
 rhoso1-ctlplane      192.168.122.80-192.168.122.90
-rhoso1-internalapi   172.17.0.80-172.17.0.90
+rhoso1-internalapi   172.17.20.80-172.17.20.90
 ...
 
 LoadBalancer Services:
 NAME                TYPE           EXTERNAL-IP      PORT(S)
-rabbitmq            LoadBalancer   172.17.0.80      5671/TCP
+rabbitmq            LoadBalancer   172.17.20.80     5671/TCP
 ...
 ```
 
@@ -325,7 +312,7 @@ rabbitmq            LoadBalancer   172.17.0.80      5671/TCP
 source config/rhoso2.env && make verify
 ```
 
-Expected output similar to instance 1, but with `rhoso2` namespace and 172.27/29/31/32 subnets.
+Expected output similar to instance 1, but with `rhoso2` namespace and 172.18.X.0/24 subnets (where X = VLAN ID).
 
 ### Manual Verification
 
