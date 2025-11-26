@@ -127,8 +127,8 @@ source config/rhoso2.env && make metallb-config
 sudo systemctl status nova-compute
 sudo journalctl -u nova-compute -n 50
 
-# Check RabbitMQ connectivity
-curl -k https://172.27.0.80:5671
+# Check RabbitMQ connectivity (Instance 2 example)
+curl -k https://172.18.20.80:5671
 ```
 
 **Common causes:**
@@ -139,8 +139,8 @@ curl -k https://172.27.0.80:5671
 
 **Fix:**
 ```bash
-# Verify EDPM node can reach control plane
-ping 172.27.0.80  # From EDPM node
+# Verify EDPM node can reach control plane (Instance 2 example)
+ping 172.18.20.80  # From EDPM node - RabbitMQ InternalAPI IP
 
 # Check hostname matches config
 ssh -i install_yamls/out/edpm/ansibleee-ssh-key-id_rsa root@192.168.122.101 hostname
@@ -149,6 +149,11 @@ ssh -i install_yamls/out/edpm/ansibleee-ssh-key-id_rsa root@192.168.122.101 host
 # Check ansible logs
 oc logs -n rhoso2 -l app=openstackansibleee
 ```
+
+**Network addressing reference:**
+- Instance 1: 172.17.20.80 (InternalAPI LoadBalancer)
+- Instance 2: 172.18.20.80 (InternalAPI LoadBalancer)
+- Pattern: `172.[16+N].[VLAN].X` where N=instance number, VLAN=20 for InternalAPI
 
 ## Non-Prefixed MetalLB Pools Conflict
 
