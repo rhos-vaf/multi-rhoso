@@ -95,6 +95,10 @@ export DATAPLANE_COMPUTE_IP
 export DATAPLANE_COMPUTE_0_IP
 export DATAPLANE_COMPUTE_0_NAME
 
+# OpenStack operator image configuration
+OPENSTACK_K8S_TAG ?= latest
+OPENSTACK_IMG ?= quay.io/openstack-k8s-operators/openstack-operator-index:${OPENSTACK_K8S_TAG}
+
 # OpenStack ControlPlane CR sample to use
 OPENSTACK_CTLPLANE ?= config/samples/core_v1beta1_openstackcontrolplane_galera_network_isolation.yaml
 export OPENSTACK_CTLPLANE
@@ -231,9 +235,7 @@ help: ## Show this help message
 	@echo "  make infrastructure     - Deploy all shared infrastructure components"
 	@echo ""
 	@echo "  Or run individual infrastructure targets once:"
-	@echo "    make nmstate          - Install NMState operator"
-	@echo "    make metallb          - Install MetalLB operator"
-	@echo "    make openstack        - Install OpenStack operators"
+	@echo "    make openstack        - Install operators (NMState, MetalLB, Cert Manager, OpenStack)"
 	@echo "    make openstack-init   - Initialize OpenStack operators"
 	@echo "    make storage          - Create persistent volumes"
 	@echo ""
@@ -310,7 +312,7 @@ openshift: check-install-yamls ## Install and configure OpenShift (CRC local clu
 ##############################################################################
 
 .PHONY: infrastructure
-infrastructure: check-install-yamls nmstate metallb openstack openstack-init storage ## Deploy all shared infrastructure
+infrastructure: check-install-yamls nmstate metallb certmanager openstack openstack-init storage ## Deploy all shared infrastructure
 
 .PHONY: nmstate
 nmstate: check-install-yamls ## Install NMState operator (network interface configuration)
@@ -326,12 +328,39 @@ metallb: check-install-yamls ## Install MetalLB operator (LoadBalancer IP alloca
 	@echo "=========================================="
 	$(MAKE) -C $(INSTALL_YAMLS_DIR) metallb
 
+.PHONY: certmanager
+certmanager: check-install-yamls ## Install Cert Manager operator (certificate management)
+	@echo "=========================================="
+	@echo "Installing Cert Manager Operator"
+	@echo "=========================================="
+	$(MAKE) -C $(INSTALL_YAMLS_DIR) certmanager
+
 .PHONY: openstack
-openstack: check-install-yamls ## Install OpenStack operators
+openstack: check-install-yamls ## Install OpenStack operators (skips NNCP, NMState, MetalLB)
 	@echo "=========================================="
 	@echo "Installing OpenStack Operators"
 	@echo "=========================================="
-	$(MAKE) -C $(INSTALL_YAMLS_DIR) openstack
+	@echo "This will install:"
+	@echo "  - Cert Manager operator (certificate management)"
+	@echo "  - OpenStack operators (Nova, Neutron, Cinder, etc.)"
+	@echo ""
+	@echo "Note: NNCP, NMState, and MetalLB are installed separately"
+	@echo "      and will be skipped during OpenStack operator installation"
+	@echo "=========================================="
+	@# Validate marketplace is ready
+	$(MAKE) -C $(INSTALL_YAMLS_DIR) validate_marketplace
+	@# Create the openstack-operators namespace
+	$(MAKE) -C $(INSTALL_YAMLS_DIR) operator_namespace NAMESPACE=openstack-operators
+	@# Generate OpenStack operator OLM files (without running dependencies)
+	@cd $(INSTALL_YAMLS_DIR) && \
+		NAMESPACE=openstack-operators \
+		OPERATOR_NAMESPACE=openstack-operators \
+		OPERATOR_NAME=openstack \
+		OPERATOR_DIR=$(OUT)/openstack-operators/openstack/op \
+		IMAGE=$(OPENSTACK_IMG) \
+		bash scripts/gen-olm.sh
+	@# Apply the OpenStack operator subscription
+	@oc apply -f $(OUT)/openstack-operators/openstack/op
 
 .PHONY: openstack-init
 openstack-init: check-install-yamls ## Initialize OpenStack operators
@@ -585,13 +614,43 @@ clean: check-namespace ## Remove instance (requires config sourced)
 	@echo ""
 	@echo "✅ Cleanup complete for $(NAMESPACE)"
 
+.PHONY: clean-infrastructure
+clean-infrastructure: ## Remove shared infrastructure operators (NMState, MetalLB, OpenStack)
+	@echo "=========================================="
+	@echo "Cleaning Shared Infrastructure"
+	@echo "WARNING: This will remove NMState, MetalLB, and OpenStack operators!"
+	@echo "=========================================="
+	@echo "Deleting NMState operator..."
+	@oc delete nmstate nmstate -n openshift-nmstate --ignore-not-found=true
+	@oc delete subscription kubernetes-nmstate-operator -n openshift-nmstate --ignore-not-found=true
+	@oc delete csv -n openshift-nmstate -l operators.coreos.com/kubernetes-nmstate-operator.openshift-nmstate --ignore-not-found=true
+	@oc delete operatorgroup -n openshift-nmstate --all --ignore-not-found=true
+	@oc delete namespace openshift-nmstate --ignore-not-found=true
+	@echo ""
+	@echo "Deleting MetalLB operator..."
+	@oc delete metallb metallb -n metallb-system --ignore-not-found=true
+	@oc delete subscription metallb-operator-sub -n metallb-system --ignore-not-found=true
+	@oc delete csv -n metallb-system -l operators.coreos.com/metallb-operator.metallb-system --ignore-not-found=true
+	@oc delete operatorgroup -n metallb-system --all --ignore-not-found=true
+	@oc delete namespace metallb-system --ignore-not-found=true
+	@echo ""
+	@echo "Deleting OpenStack operators..."
+	@oc delete namespace openstack-operators --ignore-not-found=true
+	@oc delete namespace cert-manager --ignore-not-found=true
+	@echo ""
+	@echo "✅ Infrastructure cleanup complete"
+
 .PHONY: clean-all
 clean-all: ## Remove all instances and shared infrastructure
 	@echo "=========================================="
 	@echo "Cleaning All RHOSO Instances and Infrastructure"
 	@echo "WARNING: This will remove all OpenStack operators!"
 	@echo "Press Ctrl+C to cancel, Enter to continue..."
-	@read confirm && \
-	$(MAKE) -C $(INSTALL_YAMLS_DIR) openstack_cleanup && \
-	$(MAKE) -C $(INSTALL_YAMLS_DIR) metallb_cleanup && \
-	$(MAKE) -C $(INSTALL_YAMLS_DIR) nmstate_cleanup
+	@read confirm
+	@echo ""
+	@echo "Deleting all namespaces..."
+	@for ns in $$(oc get namespaces -o name | grep -E 'rhoso|openstack'); do \
+		echo "Deleting $$ns..."; \
+		oc delete $$ns --ignore-not-found=true; \
+	done
+	@$(MAKE) clean-infrastructure

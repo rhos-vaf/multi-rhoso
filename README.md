@@ -154,12 +154,20 @@ make infrastructure
 
 **⏱️ Expected time:** 10-15 minutes
 
+This will install in sequence:
+1. **NMState operator** (`openshift-nmstate` namespace) - Network interface configuration and VLAN management
+2. **MetalLB operator** (`metallb-system` namespace) - LoadBalancer service provider for service exposure
+3. **Cert Manager operator** (`cert-manager` namespace) - Certificate management for operator webhooks
+4. **OpenStack operators** (`openstack-operators` namespace) - Control plane component operators (Nova, Neutron, Cinder, etc.)
+5. **Persistent volumes** - 30 local storage PVs for database and service storage
+
 Or step-by-step:
 
 ```bash
-make nmstate          # Install NMState operator for network configuration
-make metallb          # Install MetalLB operator as LoadBalancer service provider
-make openstack        # Install OpenStack operators for control plane management
+make nmstate          # Install NMState operator
+make metallb          # Install MetalLB operator
+make certmanager      # Install Cert Manager operator
+make openstack        # Install OpenStack operators (skips NNCP, NMState, MetalLB, Cert Manager)
 make openstack-init   # Initialize OpenStack operators and create default resources
 make storage          # Create 30 persistent volumes for database storage
 ```
@@ -417,11 +425,29 @@ Removes:
 - MetalLB IP pools for instance 1
 - Does NOT remove NNCP (manual cleanup required)
 
+### Remove Shared Infrastructure
+
+```bash
+make clean-infrastructure
+```
+
+Removes:
+- NMState operator (`openshift-nmstate` namespace)
+- MetalLB operator (`metallb-system` namespace)
+- Cert Manager operator (`cert-manager` and `cert-manager-operator` namespaces)
+- OpenStack operators (`openstack-operators` namespace)
+
+⚠️ **WARNING:** This removes all shared infrastructure. All instances must be removed first.
+
 ### Remove Everything
 
 ```bash
 make clean-all
 ```
+
+Removes:
+- All RHOSO instances (namespaces matching `rhoso*` or `openstack*`)
+- All shared infrastructure (calls `make clean-infrastructure`)
 
 ⚠️ **WARNING:** This removes ALL instances and shared infrastructure. You'll need to redeploy from scratch.
 
@@ -442,12 +468,13 @@ For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTI
 
 | Target | Description |
 |--------|-------------|
-| `make infrastructure` | Deploy all shared infrastructure (runs all targets below) |
-| `make nmstate` | Install NMState operator |
-| `make metallb` | Install MetalLB operator |
-| `make openstack` | Install OpenStack operators |
-| `make openstack-init` | Initialize OpenStack operators |
-| `make storage` | Create 30 persistent volumes for OpenStack |
+| `make infrastructure` | Deploy all shared infrastructure (runs all targets below in sequence) |
+| `make nmstate` | Install NMState operator in `openshift-nmstate` namespace |
+| `make metallb` | Install MetalLB operator in `metallb-system` namespace |
+| `make certmanager` | Install Cert Manager operator in `cert-manager` namespace |
+| `make openstack` | Install OpenStack operators in `openstack-operators` namespace (skips NNCP, NMState, MetalLB, Cert Manager) |
+| `make openstack-init` | Initialize OpenStack operators and create default OpenStack CR |
+| `make storage` | Create 30 persistent volumes for OpenStack services |
 
 ### Instance Deployment (Requires config sourced)
 
@@ -474,8 +501,9 @@ For detailed troubleshooting information, see [TROUBLESHOOTING.md](TROUBLESHOOTI
 
 | Target | Description |
 |--------|-------------|
-| `make clean` | Remove instance (requires config sourced) |
-| `make clean-all` | Remove all instances and shared infrastructure |
+| `make clean` | Remove instance (requires config sourced) - deletes namespace and MetalLB pools |
+| `make clean-infrastructure` | Remove all shared infrastructure (NMState, MetalLB, Cert Manager, OpenStack operators) |
+| `make clean-all` | Remove all instances and shared infrastructure (confirms before proceeding) |
 
 ### Usage Examples
 
