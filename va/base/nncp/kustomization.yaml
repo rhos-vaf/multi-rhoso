@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# NodeNetworkConfigurationPolicy (NNCP) for worker nodes
+# This is a cluster-wide resource deployed once
+# Configures network interfaces on worker nodes for all RHOSO instances
+#
+# Wave -5: Deployed first, before any other resources
+#
+# Deployment:
+#   This layer should be deployed ONCE before any instance-specific layers
+
+resources:
+  - nncp-worker.yaml
+
+commonLabels:
+  deployment: multi-rhoso
+  layer: nncp
+  managed-by: kustomize

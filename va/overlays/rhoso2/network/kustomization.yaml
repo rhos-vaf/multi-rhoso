@@ -1,0 +1,379 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Network resources for rhoso2
+#
+# CLUSTER-SCOPED (metallb-system namespace):
+#   - MetalLB IPAddressPools and L2Advertisements (Wave -2)
+#
+# CLUSTER-SCOPED (rhoso2 namespace):
+#   - Namespace (rhoso2) (Wave -3)
+#
+# NAMESPACED (in rhoso2 namespace):
+#   - NetworkAttachmentDefinitions (NAD) (Wave -3)
+#   - Secrets (Wave -1)
+#   - NetConfig (Wave -1)
+#
+# NOTE: We patch namespace for namespaced resources and use replacements for MetalLB pool names/IPs.
+
+resources:
+  - ../../../base/network
+
+patches:
+  # Namespace name
+  - target:
+      kind: Namespace
+      name: NAMESPACE_PLACEHOLDER
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2
+
+  # ==========================================
+  # NAMESPACED RESOURCES
+  # ==========================================
+
+  # NAD - Set namespace for ctlplane and datacentre (shared network config)
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: ctlplane
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: datacentre
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: designate
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: designateext
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+
+  # NAD - Update IP ranges for rhoso2 (172.18.x.x) AND set namespace
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: internalapi
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/config
+        value: |
+          {
+            "cniVersion": "0.3.1",
+            "name": "internalapi",
+            "type": "macvlan",
+            "master": "enp6s0.20",
+            "ipam": {
+              "type": "whereabouts",
+              "range": "172.18.20.0/24",
+              "range_start": "172.18.20.30",
+              "range_end": "172.18.20.70"
+            }
+          }
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: storage
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/config
+        value: |
+          {
+            "cniVersion": "0.3.1",
+            "name": "storage",
+            "type": "macvlan",
+            "master": "enp6s0.21",
+            "ipam": {
+              "type": "whereabouts",
+              "range": "172.18.21.0/24",
+              "range_start": "172.18.21.30",
+              "range_end": "172.18.21.70"
+            }
+          }
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: tenant
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/config
+        value: |
+          {
+            "cniVersion": "0.3.1",
+            "name": "tenant",
+            "type": "macvlan",
+            "master": "enp6s0.22",
+            "ipam": {
+              "type": "whereabouts",
+              "range": "172.18.22.0/24",
+              "range_start": "172.18.22.30",
+              "range_end": "172.18.22.70"
+            }
+          }
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: storagemgmt
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/config
+        value: |
+          {
+            "cniVersion": "0.3.1",
+            "name": "storagemgmt",
+            "type": "macvlan",
+            "master": "enp6s0.23",
+            "ipam": {
+              "type": "whereabouts",
+              "range": "172.18.23.0/24",
+              "range_start": "172.18.23.30",
+              "range_end": "172.18.23.70"
+            }
+          }
+
+  - target:
+      kind: NetworkAttachmentDefinition
+      name: external
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/config
+        value: |
+          {
+            "cniVersion": "0.3.1",
+            "name": "external",
+            "type": "macvlan",
+            "master": "enp6s0.26",
+            "ipam": {
+              "type": "whereabouts",
+              "range": "172.18.26.0/24",
+              "range_start": "172.18.26.30",
+              "range_end": "172.18.26.70"
+            }
+          }
+
+  # Secret - set namespace to rhoso2
+  - target:
+      kind: Secret
+      name: osp-secret
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+
+  # NetConfig - rhoso2 network ranges (172.18.x.x) AND set namespace
+  - target:
+      kind: NetConfig
+      name: netconfig
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: rhoso2
+      - op: replace
+        path: /spec/networks/1/subnets/0/allocationRanges
+        value:
+          - start: 172.18.20.100
+            end: 172.18.20.250
+      - op: replace
+        path: /spec/networks/1/subnets/0/cidr
+        value: 172.18.20.0/24
+      - op: replace
+        path: /spec/networks/2/subnets/0/allocationRanges
+        value:
+          - start: 172.18.21.100
+            end: 172.18.21.250
+      - op: replace
+        path: /spec/networks/2/subnets/0/cidr
+        value: 172.18.21.0/24
+      - op: replace
+        path: /spec/networks/3/subnets/0/allocationRanges
+        value:
+          - start: 172.18.22.100
+            end: 172.18.22.250
+      - op: replace
+        path: /spec/networks/3/subnets/0/cidr
+        value: 172.18.22.0/24
+      - op: replace
+        path: /spec/networks/4/subnets/0/allocationRanges
+        value:
+          - start: 172.18.23.100
+            end: 172.18.23.250
+      - op: replace
+        path: /spec/networks/4/subnets/0/cidr
+        value: 172.18.23.0/24
+      - op: replace
+        path: /spec/networks/5/subnets/0/allocationRanges
+        value:
+          - start: 172.18.25.100
+            end: 172.18.25.250
+      - op: replace
+        path: /spec/networks/5/subnets/0/cidr
+        value: 172.18.25.0/24
+      - op: replace
+        path: /spec/networks/6/subnets/0/allocationRanges
+        value:
+          - start: 172.18.26.100
+            end: 172.18.26.250
+      - op: replace
+        path: /spec/networks/6/subnets/0/cidr
+        value: 172.18.26.0/24
+      - op: replace
+        path: /spec/networks/6/subnets/0/gateway
+        value: 172.18.26.1
+
+  # ==========================================
+  # METALLB POOLS (CLUSTER-SCOPED - metallb-system namespace)
+  # ==========================================
+
+  # MetalLB pools for rhoso2 - patch names and IP ranges
+  - target:
+      kind: IPAddressPool
+      name: INSTANCE_PREFIX-ctlplane
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-ctlplane
+      - op: replace
+        path: /spec/addresses/0
+        value: 192.168.122.110-192.168.122.120
+
+  - target:
+      kind: L2Advertisement
+      name: INSTANCE_PREFIX-ctlplane
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-ctlplane
+      - op: replace
+        path: /spec/ipAddressPools/0
+        value: rhoso2-ctlplane
+
+  - target:
+      kind: IPAddressPool
+      name: INSTANCE_PREFIX-internalapi
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-internalapi
+      - op: replace
+        path: /spec/addresses/0
+        value: 172.18.20.80-172.18.20.90
+
+  - target:
+      kind: L2Advertisement
+      name: INSTANCE_PREFIX-internalapi
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-internalapi
+      - op: replace
+        path: /spec/ipAddressPools/0
+        value: rhoso2-internalapi
+
+  - target:
+      kind: IPAddressPool
+      name: INSTANCE_PREFIX-storage
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-storage
+      - op: replace
+        path: /spec/addresses/0
+        value: 172.18.21.80-172.18.21.90
+
+  - target:
+      kind: L2Advertisement
+      name: INSTANCE_PREFIX-storage
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-storage
+      - op: replace
+        path: /spec/ipAddressPools/0
+        value: rhoso2-storage
+
+  - target:
+      kind: IPAddressPool
+      name: INSTANCE_PREFIX-tenant
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-tenant
+      - op: replace
+        path: /spec/addresses/0
+        value: 172.18.22.80-172.18.22.90
+
+  - target:
+      kind: L2Advertisement
+      name: INSTANCE_PREFIX-tenant
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-tenant
+      - op: replace
+        path: /spec/ipAddressPools/0
+        value: rhoso2-tenant
+
+  - target:
+      kind: IPAddressPool
+      name: INSTANCE_PREFIX-designateext
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-designateext
+      - op: replace
+        path: /spec/addresses/0
+        value: 172.18.26.80-172.18.26.90
+
+  - target:
+      kind: L2Advertisement
+      name: INSTANCE_PREFIX-designateext
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: rhoso2-designateext
+      - op: replace
+        path: /spec/ipAddressPools/0
+        value: rhoso2-designateext
+
+labels:
+  - pairs:
+      deployment: multi-rhoso
+      instance: rhoso2
+      layer: network
+      managed-by: kustomize
+
+commonLabels:
+  app.kubernetes.io/part-of: openstack
+  app.kubernetes.io/managed-by: kustomize

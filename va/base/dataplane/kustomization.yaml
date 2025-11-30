@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base EDPM DataPlane
+# Wave -5: DataPlane Services (namespace-scoped)
+# Wave 9: DataPlane SSH Secret
+# Wave 10: DataPlaneNodeSet, DataPlaneDeployment
+# Note: namespace is set by overlay, not here
+
+resources:
+  - repo-setup-service.yaml
+  - libvirt-secret.yaml
+  - nova-migration-ssh-key.yaml
+  - dataplane-ssh-secret.yaml
+  - nodeset.yaml
+  - deployment.yaml

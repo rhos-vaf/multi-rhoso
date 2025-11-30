@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# OpenStack Control Plane for rhoso2
+# References base/controlplane with strategic merge patch for rhoso2 pool names and IPs
+
+namespace: rhoso2
+
+resources:
+  - ../../../base/controlplane
+
+patchesStrategicMerge:
+  - patch-pools-and-ips.yaml
+
+labels:
+  - pairs:
+      deployment: multi-rhoso
+      instance: rhoso2
+      layer: controlplane
+      managed-by: kustomize
+
+commonLabels:
+  app.kubernetes.io/part-of: openstack
+  app.kubernetes.io/managed-by: kustomize

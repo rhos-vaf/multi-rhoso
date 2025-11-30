@@ -1,0 +1,362 @@
+---
+apiVersion: core.openstack.org/v1beta1
+kind: OpenStackControlPlane
+metadata:
+  name: openstack
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    metallb.universe.tf/address-pool: rhoso1-ctlplane
+spec:
+  secret: osp-secret
+  storageClass: local-storage
+
+  dns:
+    template:
+      options:
+        - key: server
+          values:
+            - 192.168.122.1
+      override:
+        service:
+          metadata:
+            annotations:
+              metallb.universe.tf/address-pool: rhoso1-ctlplane
+          spec:
+            type: LoadBalancer
+
+  galera:
+    enabled: true
+    templates:
+      openstack:
+        replicas: 1
+        secret: osp-secret
+        storageRequest: 5G
+      openstack-cell1:
+        replicas: 1
+        secret: osp-secret
+        storageRequest: 5G
+
+  rabbitmq:
+    templates:
+      rabbitmq:
+        replicas: 1
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+            spec:
+              type: LoadBalancer
+      rabbitmq-cell1:
+        replicas: 1
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+            spec:
+              type: LoadBalancer
+
+  memcached:
+    templates:
+      memcached:
+        replicas: 1
+
+  keystone:
+    apiOverride:
+      route: {}
+    template:
+      databaseInstance: openstack
+      secret: osp-secret
+      replicas: 1
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+            spec:
+              type: LoadBalancer
+
+  placement:
+    apiOverride:
+      route: {}
+    template:
+      databaseInstance: openstack
+      secret: osp-secret
+      replicas: 1
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+            spec:
+              type: LoadBalancer
+
+  glance:
+    apiOverrides:
+      default:
+        route: {}
+    template:
+      databaseInstance: openstack
+      customServiceConfig: |
+        [DEFAULT]
+        enabled_backends = default_backend:swift
+        [glance_store]
+        default_backend = default_backend
+        [default_backend]
+        swift_store_create_container_on_put = True
+        swift_store_auth_version = 3
+        swift_store_auth_address = {{ .KeystoneInternalURL }}
+        swift_store_endpoint_type = internalURL
+        swift_store_user = service:glance
+        swift_store_key = {{ .ServicePassword }}
+      glanceAPIs:
+        default:
+          replicas: 1
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: rhoso1-internalapi
+                    metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+                spec:
+                  type: LoadBalancer
+      storage:
+        storageRequest: 10G
+
+  cinder:
+    apiOverride:
+      route: {}
+    template:
+      cinderAPI:
+        replicas: 1
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso1-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+              spec:
+                type: LoadBalancer
+      cinderScheduler:
+        replicas: 1
+      cinderBackup:
+        replicas: 0
+      databaseInstance: openstack
+      secret: osp-secret
+
+  ovn:
+    template:
+      ovnDBCluster:
+        ovndbcluster-nb:
+          dbType: NB
+          networkAttachment: internalapi
+          storageRequest: 10G
+          replicas: 1
+        ovndbcluster-sb:
+          dbType: SB
+          networkAttachment: internalapi
+          storageRequest: 10G
+          replicas: 1
+      ovnNorthd:
+        replicas: 1
+      ovnController:
+        networkAttachment: tenant
+        nicMappings:
+          datacentre: ospbr
+
+  neutron:
+    apiOverride:
+      route: {}
+    template:
+      databaseInstance: openstack
+      secret: osp-secret
+      replicas: 1
+      override:
+        service:
+          internal:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+            spec:
+              type: LoadBalancer
+
+  nova:
+    apiOverride:
+      route: {}
+    template:
+      secret: osp-secret
+      apiServiceTemplate:
+        replicas: 1
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso1-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+              spec:
+                type: LoadBalancer
+      schedulerServiceTemplate:
+        replicas: 1
+      metadataServiceTemplate:
+        replicas: 1
+        override:
+          service:
+            metadata:
+              annotations:
+                metallb.universe.tf/address-pool: rhoso1-internalapi
+                metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+      cellTemplates:
+        cell0:
+          cellDatabaseAccount: nova-cell0
+          cellDatabaseInstance: openstack
+          cellMessageBusInstance: rabbitmq
+          conductorServiceTemplate:
+            replicas: 1
+          hasAPIAccess: true
+        cell1:
+          cellDatabaseAccount: nova-cell1
+          cellDatabaseInstance: openstack-cell1
+          cellMessageBusInstance: rabbitmq-cell1
+          conductorServiceTemplate:
+            replicas: 1
+          hasAPIAccess: true
+
+  # Disabled services
+  horizon:
+    enabled: false
+  barbican:
+    enabled: false
+  designate:
+    enabled: false
+  heat:
+    enabled: false
+  ironic:
+    enabled: false
+  manila:
+    enabled: false
+  octavia:
+    enabled: false
+  swift:
+    enabled: true
+    template:
+      swiftRing:
+        ringReplicas: 1
+      swiftStorage:
+        replicas: 1
+        storageRequest: 10G
+      swiftProxy:
+        replicas: 1
+        override:
+          service:
+            internal:
+              metadata:
+                annotations:
+                  metallb.universe.tf/address-pool: rhoso1-internalapi
+                  metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                  metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+              spec:
+                type: LoadBalancer
+  telemetry:
+    enabled: true
+    template:
+      autoscaling:
+        aodh:
+          apiTimeout: 60
+          databaseAccount: aodh
+          databaseInstance: openstack
+          memcachedInstance: memcached
+          passwordSelector:
+            aodhService: AodhPassword
+            ceilometerService: CeilometerPassword
+            cloudKittyService: CloudKittyPassword
+          preserveJobs: false
+          rabbitMqClusterName: rabbitmq
+          secret: osp-secret
+          serviceUser: aodh
+        enabled: false
+        heatInstance: heat
+      ceilometer:
+        apiTimeout: 60
+        enabled: true
+        ksmEnabled: true
+        passwordSelector:
+          aodhService: AodhPassword
+          ceilometerService: CeilometerPassword
+          cloudKittyService: CloudKittyPassword
+        rabbitMqClusterName: rabbitmq
+        secret: osp-secret
+        serviceUser: ceilometer
+      cloudkitty:
+        apiTimeout: 0
+        cloudKittyAPI:
+          override:
+            service:
+              internal:
+                metadata:
+                  annotations:
+                    metallb.universe.tf/address-pool: rhoso1-internalapi
+                    metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+                    metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+                spec:
+                  type: LoadBalancer
+          replicas: 1
+          resources: {}
+          tls:
+            api:
+              internal: {}
+              public: {}
+            caBundleSecretName: combined-ca-bundle
+        cloudKittyProc:
+          replicas: 1
+          resources: {}
+          tls:
+            caBundleSecretName: combined-ca-bundle
+        databaseAccount: cloudkitty
+        databaseInstance: openstack
+        enabled: false
+        memcachedInstance: memcached
+        passwordSelector:
+          aodhService: AodhPassword
+          ceilometerService: CeilometerPassword
+          cloudKittyService: CloudKittyPassword
+        preserveJobs: false
+        rabbitMqClusterName: rabbitmq
+        secret: osp-secret
+        serviceUser: cloudkitty
+        storageClass: local-storage
+      logging:
+        annotations:
+          metallb.universe.tf/address-pool: rhoso1-internalapi
+          metallb.universe.tf/allow-shared-ip: rhoso1-internalapi
+          metallb.universe.tf/loadBalancerIPs: 172.17.20.80
+        cloNamespace: openshift-logging
+        enabled: false
+        port: 10514
+      metricStorage:
+        enabled: false
+        monitoringStack:
+          alertingEnabled: true
+          scrapeInterval: 30s
+          storage:
+            strategy: persistent
+            retention: 24h
+            persistent:
+              pvcStorageRequest: 20G

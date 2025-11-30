@@ -1,0 +1,29 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Network resources for RHOSO instances (per-instance)
+# These resources are namespaced and deployed per instance
+#
+# CLUSTER-SCOPED RESOURCES (require cluster-admin):
+#   - Namespace (Wave -3)
+#
+# NAMESPACED RESOURCES (in instance namespace):
+#   - NetworkAttachmentDefinitions (NAD) - Wave -3
+#   - Secrets - Wave -1
+#   - NetConfig - Wave -1
+#
+# NOTE: Overlays patch namespace for each namespaced resource individually
+# to keep them in the correct instance namespace
+
+resources:
+  # Cluster-scoped (metallb-system namespace)
+  - ipaddresspool.yaml          # Wave -2 (MetalLB pools)
+
+  # Cluster-scoped (instance namespace)
+  - namespace.yaml              # Wave -3
+
+  # Namespaced (will be placed in instance namespace by overlay patches)
+  - netattach.yaml              # Wave -3
+  - osp-secret.yaml             # Wave -1
+  - netconfig.yaml              # Wave -1

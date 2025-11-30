@@ -1,0 +1,26 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneNodeSet
+metadata:
+  name: openstack-edpm
+spec:
+  nodes:
+    edpm-compute-0:
+      $patch: delete
+    edpm-compute-1:
+      hostName: edpm-compute-1
+      ansible:
+        ansibleHost: 192.168.122.101
+      networks:
+        - name: ctlplane
+          subnetName: subnet1
+          defaultRoute: true
+          fixedIP: 192.168.122.101
+        - name: internalapi
+          subnetName: subnet1
+        - name: storage
+          subnetName: subnet1
+        - name: tenant
+          subnetName: subnet1
+        - name: storagemgmt
+          subnetName: subnet1

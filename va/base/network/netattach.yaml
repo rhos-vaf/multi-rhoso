@@ -1,0 +1,171 @@
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ctlplane
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "ctlplane",
+      "type": "macvlan",
+      "master": "ospbr",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "192.168.122.0/24",
+        "range_start": "192.168.122.30",
+        "range_end": "192.168.122.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: datacentre
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "datacentre",
+      "type": "bridge",
+      "bridge": "ospbr",
+      "ipam": {}
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: designate
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "designate",
+      "type": "macvlan",
+      "master": "enp6s0.25",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.25.0/24",
+        "range_start": "172.17.25.30",
+        "range_end": "172.17.25.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: designateext
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "designatext",
+      "type": "macvlan",
+      "master": "enp6s0.26",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.26.0/24",
+        "range_start": "172.17.26.30",
+        "range_end": "172.17.26.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: internalapi
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "internalapi",
+      "type": "macvlan",
+      "master": "enp6s0.20",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.20.0/24",
+        "range_start": "172.17.20.30",
+        "range_end": "172.17.20.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: storage
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "storage",
+      "type": "macvlan",
+      "master": "enp6s0.21",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.21.0/24",
+        "range_start": "172.17.21.30",
+        "range_end": "172.17.21.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: tenant
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "tenant",
+      "type": "macvlan",
+      "master": "enp6s0.22",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.22.0/24",
+        "range_start": "172.17.22.30",
+        "range_end": "172.17.22.70"
+      }
+    }
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: storagemgmt
+  namespace: NAMESPACE_PLACEHOLDER
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "storagemgmt",
+      "type": "macvlan",
+      "master": "enp6s0.23",
+      "ipam": {
+        "type": "whereabouts",
+        "range": "172.17.23.0/24",
+        "range_start": "172.17.23.30",
+        "range_end": "172.17.23.70"
+      }
+    }

@@ -1,0 +1,28 @@
+---
+apiVersion: dataplane.openstack.org/v1beta1
+kind: OpenStackDataPlaneService
+metadata:
+  name: repo-setup
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+  labels:
+    app.kubernetes.io/name: openstackdataplaneservice
+    app.kubernetes.io/instance: repo-setup
+    app.kubernetes.io/part-of: openstack-operator
+spec:
+  playbookContents: |
+    - hosts: all
+      strategy: linear
+      tasks:
+        - name: Enable podified-repos
+          become: true
+          ansible.builtin.shell: |
+            set -euxo pipefail
+            pushd /var/tmp
+            curl -sL https://github.com/openstack-k8s-operators/repo-setup/archive/refs/heads/main.tar.gz | tar -xz
+            pushd repo-setup-main
+            python3 -m venv ./venv
+            PBR_VERSION=0.0.0 ./venv/bin/pip install ./
+            ./venv/bin/repo-setup current-podified -b antelope
+            popd
+            rm -rf repo-setup-main

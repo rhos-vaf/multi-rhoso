@@ -1,0 +1,123 @@
+---
+# MetalLB IPAddressPools and L2Advertisements
+# Template with INSTANCE_PREFIX placeholder to be replaced by overlays
+# Wave -2 to deploy before network resources (Wave -3 for namespace, NAD)
+
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: INSTANCE_PREFIX-ctlplane
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  addresses:
+    - CTLPLANE_RANGE
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: INSTANCE_PREFIX-ctlplane
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ipAddressPools:
+    - INSTANCE_PREFIX-ctlplane
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: INSTANCE_PREFIX-internalapi
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  addresses:
+    - INTERNALAPI_RANGE
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: INSTANCE_PREFIX-internalapi
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ipAddressPools:
+    - INSTANCE_PREFIX-internalapi
+  interfaces:
+    - enp6s0.20
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: INSTANCE_PREFIX-storage
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  addresses:
+    - STORAGE_RANGE
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: INSTANCE_PREFIX-storage
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ipAddressPools:
+    - INSTANCE_PREFIX-storage
+  interfaces:
+    - enp6s0.21
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: INSTANCE_PREFIX-tenant
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  addresses:
+    - TENANT_RANGE
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: INSTANCE_PREFIX-tenant
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ipAddressPools:
+    - INSTANCE_PREFIX-tenant
+  interfaces:
+    - enp6s0.22
+---
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: INSTANCE_PREFIX-designateext
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  addresses:
+    - DESIGNATEEXT_RANGE
+  autoAssign: false
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: INSTANCE_PREFIX-designateext
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ipAddressPools:
+    - INSTANCE_PREFIX-designateext
+  interfaces:
+    - enp6s0.26

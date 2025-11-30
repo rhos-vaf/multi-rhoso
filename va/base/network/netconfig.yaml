@@ -1,0 +1,76 @@
+---
+apiVersion: network.openstack.org/v1beta1
+kind: NetConfig
+metadata:
+  name: netconfig
+  namespace: rhoso1
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  networks:
+  - name: CtlPlane
+    dnsDomain: ctlplane.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 192.168.122.100
+        end: 192.168.122.120
+      - start: 192.168.122.150
+        end: 192.168.122.180
+      cidr: 192.168.122.0/24
+      gateway: 192.168.122.1
+  - name: InternalApi
+    dnsDomain: internalapi.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.20.100
+        end: 172.17.20.250
+      cidr: 172.17.20.0/24
+      vlan: 20
+  - name: Storage
+    dnsDomain: storage.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.21.100
+        end: 172.17.21.250
+      cidr: 172.17.21.0/24
+      vlan: 21
+  - name: Tenant
+    dnsDomain: tenant.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.22.100
+        end: 172.17.22.250
+      cidr: 172.17.22.0/24
+      vlan: 22
+  - name: StorageMgmt
+    dnsDomain: storagemgmt.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.23.100
+        end: 172.17.23.250
+      cidr: 172.17.23.0/24
+      vlan: 23
+  - name: Designate
+    dnsDomain: designate.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.25.100
+        end: 172.17.25.250
+      cidr: 172.17.25.0/24
+      vlan: 25
+  - name: DesignateExt
+    dnsDomain: designateext.example.com
+    subnets:
+    - name: subnet1
+      allocationRanges:
+      - start: 172.17.26.100
+        end: 172.17.26.250
+      cidr: 172.17.26.0/24
+      vlan: 26
+      gateway: 172.17.26.1
