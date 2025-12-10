@@ -129,6 +129,13 @@ This project supports **two deployment methods**:
 - Manages entire lifecycle: NNCP → Namespace → NAD → MetalLB → Secrets → NetConfig → ControlPlane → EDPM
 - Full deployment in ~40-50 minutes, completely automated
 - Automatic Nova cell host discovery included
+- **Prerequisites**: Install OpenShift GitOps Operator using [gitops-tools](https://github.com/rhos-vaf/gitops-tools.git):
+  ```bash
+  git clone https://github.com/rhos-vaf/gitops-tools.git
+  cd gitops-tools
+  make install_gitops_operator        # Install OpenShift GitOps Operator
+  make configure_openshift_gitops     # Configure permissions and certificates
+  ```
 - See [gitops/README.md](gitops/README.md) for details
 
 **Comparison:**

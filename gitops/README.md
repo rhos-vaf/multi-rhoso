@@ -43,7 +43,6 @@ multi-rhoso/
 ├── gitops/                             # GitOps deployment configuration (this directory)
 │   ├── README.md                       # This file - deployment guide
 │   ├── TROUBLESHOOTING.md              # Troubleshooting guide
-│   ├── Makefile                        # Quick deployment helpers
 │   ├── argocd-apps/                    # ArgoCD Application manifests
 │   │   ├── rhoso1-cluster.yaml
 │   │   ├── rhoso1-network.yaml
@@ -154,29 +153,6 @@ Resources are deployed in a specific order using ArgoCD sync waves:
 
 **Post-Deployment**: Nova cell host discovery required (see [Post-Deployment Tasks](#post-deployment-tasks))
 
-## Quick Start with Makefile
-
-This directory includes a Makefile for quick deployment tasks:
-
-```bash
-# Show available targets
-make help
-
-# Install OpenShift GitOps Operator
-make gitops
-
-# Configure ArgoCD with cluster-wide permissions
-make cluster-wide-permissions
-```
-
-### Available Makefile Targets
-
-| Target | Description |
-|--------|-------------|
-| `make help` | Show all available targets with descriptions |
-| `make gitops` | Install OpenShift GitOps Operator via CLI |
-| `make cluster-wide-permissions` | Grant cluster-admin permissions to ArgoCD instance |
-
 ## GitOps Deployment with ArgoCD
 
 ### Prerequisites
@@ -237,11 +213,12 @@ Edit the following files and replace the placeholder values with your actual SSH
 **OpenShift GitOps Operator**
 - Deploys ArgoCD in cluster mode by default
 - Has cluster-admin permissions to manage all resources
-- Quick install using Makefile:
+- Quick install using [gitops-tools](https://github.com/rhos-vaf/gitops-tools.git):
   ```bash
-  cd va/
-  make gitops
-  make cluster-wide-permissions
+  git clone https://github.com/rhos-vaf/gitops-tools.git
+  cd gitops-tools
+  make install_gitops_operator        # Install OpenShift GitOps Operator
+  make configure_openshift_gitops     # Configure permissions and TLS certificates
   ```
 - Or install from OperatorHub UI
 
